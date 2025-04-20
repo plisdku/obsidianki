@@ -1,0 +1,48 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.3.0  # You can specify the version you need
+    hooks:
+      - id: black
+        name: Black
+        language_version: python3.12
+
+  # - repo: https://github.com/pycqa/isort
+  #   rev: 5.11.0  # You can specify the version you need
+  #   hooks:
+  #     - id: isort
+  #       name: isort
+  #       language_version: python3.12
+
+  # - repo: https://github.com/pycqa/flake8
+  #   rev: 6.0.0  # You can specify the version you need
+  #   hooks:
+  #     - id: flake8
+  #       name: flake8
+  #       additional_dependencies: ['flake8-bugbear', 'flake8-comprehensions']
+  #       language_version: python3.12
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0  # You can specify the version you need
+    hooks:
+      - id: trailing-whitespace
+        name: Remove trailing whitespace
+      - id: end-of-file-fixer
+        name: End-of-file fixer
+      - id: check-yaml
+        name: Check YAML files
+      - id: check-json
+        name: Check JSON files
+      - id: check-added-large-files
+        name: Prevent large files from being added to git
+
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.4.0  # You can specify the version you need
+  #   hooks:
+  #     - id: mypy
+  #       name: MyPy
+  #       language_version: python3.12
+
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.7.1
+    hooks:
+      - id: nbstripout

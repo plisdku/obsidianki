@@ -1,0 +1,60 @@
+[project]
+name = "plisdku-obsidianki"
+version = "0.0.1"
+requires-python = ">=3.12"
+
+dependencies = [
+    "lark"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pre-commit",
+    "ruff",
+    "coverage",
+    "tbump",
+]
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+
+[tool.tbump.version]
+current = "0.0.1"
+regex = '''
+  (?P<major>\d+)
+  \.
+  (?P<minor>\d+)
+  \.
+  (?P<patch>\d+)
+  '''
+
+
+[[tool.tbump.file]]
+src = "pyproject.toml"
+search = 'version = "{current_version}"'
+# replace = 'version = "{new_version}"'
+
+[[tool.tbump.file]]
+src = "src/obsidianki/__init__.py"
+search = '__version__ = "{current_version}"'
+# replace = '__version__ = "{new_version}"'
+
+[[tool.tbump.file]]
+src = "README.md"
+search = '\*\*Version\*\*: {current_version}'
+# replace = 'Version: {new_version}'
+
+[tool.tbump.git]
+message_template = "Bump to {new_version}"
+tag_template = "v{new_version}"
