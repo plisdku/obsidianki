@@ -1,5 +1,9 @@
 import re
 import pathlib
+import textwrap
+import random
+
+from obsidianki.my_emoji import EMOJI
 
 def split_between_matches(contents, matches):
     """
@@ -34,7 +38,7 @@ def split_sections(contents):
 
 
 def convert_math_delims(section: str) -> str:
-    """
+    r"""
     Convert math delimiters in the section.
         - $...$ becomes \(...\)
         - $$...$$ becomes \[...\]
@@ -95,32 +99,68 @@ fname = pathlib.Path("/Users/paul/Documents/Obsidian Vault/Math notes/Atakishiye
 with open(fname) as fh:
     contents = fh.read()
 
-tags = {
-    "Q": "",
-    "A": "",
-    "AA": "",
-    "Addendum": "",
-    "Book": "",
-    "Page": "",
-    "Chapter": "",
-    "Tags": ""
-}
+def convert_obsidian_to_anki(contents: str) -> str:
+    tags = {
+        "Q": "",
+        "A": "",
+        "AA": "",
+        "Addendum": "",
+        "Book": "",
+        "Page": "",
+        "Chapter": "",
+        "Tags": ""
+    }
 
-for token, section in split_sections(contents):
+    out_cards = []
+    card = {}
+    for token, section in split_sections(contents):
 
-    emoji, token_type = token.groups()
-    if emoji == "✅":
-        pass
-    value = convert_math_delims(section.strip())
-    tags[token_type] = value
+        emoji, token_type = token.groups()
+        if emoji == "✅":
+            pass
+        value = convert_math_delims(section.strip())
+        tags[token_type] = value.strip()
 
-    if token_type == "A":
-        print("Q:")
-        print(tags["Q"])
-        print("A:")
-        print(tags["A"])
-        print("Book:", tags["Book"])
-        print("Chapter:", tags["Chapter"])
-        print("Page:", tags["Page"])
+        if token_type == "Q":
+            card = {}
+            out_cards.append(card)
+            card["Q"] = tags["Q"]
+            card["Book"] = tags["Book"]
+            card["Chapter"] = tags["Chapter"]
+            card["Page"] = tags["Page"]
+        else:
+            card[token_type] = tags[token_type]
+    
+    return out_cards
 
-    print("-"*20)
+
+def main():
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Convert Obsidian Markdown to Anki HTML")
+    parser.add_argument("input_file", help="Obsidian markdown file")
+    parser.add_argument("output_file", help="Output Anki-compatible file")
+    args = parser.parse_args()
+    
+    with open(args.input_file, 'r', encoding='utf-8') as f:
+        obsidian_text = f.read()
+    
+    anki_cards = convert_obsidian_to_anki(obsidian_text)
+
+    # Write to output file in a format Anki can import
+    with open(args.output_file, 'w', encoding='utf-8') as f:
+        for card in anki_cards:
+            if "AA" in card:
+                answer = card["A"] + "\n\n" + random.choice(EMOJI) + "\n\n" + card["AA"]
+            else:
+                answer = card["A"]
+            
+            card_text = f"Q:\n{card['Q']}\nA:\n{answer}\nBook:\n{card['Book']}\nChapter:\n{card['Chapter']}\nPage:\n{card['Page']}\n"
+            f.write(card_text)
+            f.write("-"*20 + "\n")
+    
+    # print(f"Converted {len(anki_cards)} cards from {args.input_file} to {args.output_file}")
+
+
+if __name__ == "__main__":
+    main()
