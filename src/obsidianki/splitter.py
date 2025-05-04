@@ -1,7 +1,6 @@
-import re
 import pathlib
-import textwrap
 import random
+import re
 
 from obsidianki.my_emoji import EMOJI
 
@@ -25,9 +24,7 @@ def split_sections(contents):
     """
     # Define a regex pattern to match the tags
     # tag_pattern = re.compile(r"^\s?(✅)?\s?([A-Za-z ]+):", re.MULTILINE)
-    tag_pattern = re.compile(
-        r"^\s*(✅)?\s*[*_]*([A-Za-z ]+)[*_]*\s*:[*_]*", re.MULTILINE
-    )
+    tag_pattern = re.compile(r"^\s*(✅)?\s*[*_]*([A-Za-z ]+)[*_]*\s*:[*_]*", re.MULTILINE)
 
     # Find all matches for the tag pattern
     matches = list(tag_pattern.finditer(contents))
@@ -146,9 +143,7 @@ def convert_obsidian_to_anki(contents: str) -> str:
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Convert Obsidian Markdown to Anki HTML"
-    )
+    parser = argparse.ArgumentParser(description="Convert Obsidian Markdown to Anki HTML")
     parser.add_argument("input_file", help="Obsidian markdown file")
     parser.add_argument("output_file", help="Output Anki-compatible file")
     args = parser.parse_args()
@@ -167,13 +162,14 @@ def main():
             if "AA" in card:
                 answer += "\n\n" + random.choice(EMOJI) + "\n\n" + card["AA"]
 
-            card_text = f"Q:\n{card['Q']}\nA:\n{answer}\nBook:\n{card['Book']}\nChapter:\n{card['Chapter']}\nPage:\n{card['Page']}\n"
+            card_text = (
+                f"Q:\n{card['Q']}\nA:\n{answer}\nBook:\n{card['Book']}"
+                "\nChapter:\n{card['Chapter']}\nPage:\n{card['Page']}\n"
+            )
             f.write(card_text)
             f.write("-" * 20 + "\n")
 
-    print(
-        f"Converted {len(anki_cards)} cards from {args.input_file} to {args.output_file}"
-    )
+    print(f"Converted {len(anki_cards)} cards from {args.input_file} to {args.output_file}")
 
 
 if __name__ == "__main__":

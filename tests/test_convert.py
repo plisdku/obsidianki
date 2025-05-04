@@ -1,13 +1,15 @@
-from obsidianki.convert import (
-    extract_flashcard_blocks,
-    get_flashcard_fields,
-    find_dollar_math_substrings,
-    convert_math,
-    FlashcardExtractionError,
-)
-import pytest
-from textwrap import dedent
 from itertools import product
+from textwrap import dedent
+
+import pytest
+
+from obsidianki.convert import (
+    FlashcardExtractionError,
+    convert_math,
+    extract_flashcard_blocks,
+    find_dollar_math_substrings,
+    get_flashcard_fields,
+)
 
 
 def test_extract_flashcard_blocks():
@@ -58,9 +60,7 @@ def test_extract_unclosed_flashcard():
 
 
 def test_get_flashcard_fields():
-    for answer, book, chapter, page in product(
-        ["A", "Answer"], ["Book", "R"], ["C", "Chapter"], ["P", "Page"]
-    ):
+    for answer, book, chapter, page in product(["A", "Answer"], ["Book", "R"], ["C", "Chapter"], ["P", "Page"]):
         # Swap in equivalent versions of the tags.
         # Also note some newlines put in there.
         text = dedent(
@@ -91,9 +91,7 @@ def test_get_flashcard_fields_default():
     """
     )
 
-    fields = get_flashcard_fields(
-        text, defaults={"Q": "What is the capital of France?", "A": "Paris", "P": "15"}
-    )
+    fields = get_flashcard_fields(text, defaults={"Q": "What is the capital of France?", "A": "Paris", "P": "15"})
 
     assert fields == {"Q": "What is the capital of France?", "A": "Paris", "P": "15"}
 
@@ -116,10 +114,7 @@ def test_find_dollar_math_substrings():
     assert text[math_ranges[0][0] : math_ranges[0][1]] == "$inline math$"
     assert text[math_ranges[1][0] : math_ranges[1][1]] == "$$display math$$"
     assert text[math_ranges[2][0] : math_ranges[2][1]] == "$nested {$math$} in it$"
-    assert (
-        text[math_ranges[3][0] : math_ranges[3][1]]
-        == "$$display {$m {$at$} h$} in it$$"
-    )
+    assert text[math_ranges[3][0] : math_ranges[3][1]] == "$$display {$m {$at$} h$} in it$$"
 
 
 def test_convert_math():
