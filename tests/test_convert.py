@@ -91,9 +91,12 @@ def test_get_flashcard_fields_default():
     """
     )
 
-    fields = get_flashcard_fields(text, defaults={"Q": "What is the capital of France?", "A": "Paris", "P": "15"})
+    # We give a bunch of default fields but we only keep the page.
+    fields = get_flashcard_fields(text, defaults={"P": "15"})
+    assert fields == {"Q": "What is the capital of France?", "P": "15"}
 
-    assert fields == {"Q": "What is the capital of France?", "A": "Paris", "P": "15"}
+
+test_get_flashcard_fields_default()
 
 
 def test_find_dollar_math_substrings():

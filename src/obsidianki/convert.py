@@ -49,7 +49,8 @@ def get_flashcard_fields(text: str, defaults: dict[str, str] | None = None) -> d
     if defaults is None:
         defaults = {}
 
-    fields = defaults.copy()
+    carryover_fields = ("R", "C", "P")
+    fields = {**{key: defaults[key] for key in carryover_fields if key in defaults}}
 
     field_pattern = re.compile(r"^(A|Answer|X|Extra|R|Reference|Book|C|Chapter|P|Page):", re.MULTILINE)
 
@@ -79,6 +80,9 @@ def get_flashcard_fields(text: str, defaults: dict[str, str] | None = None) -> d
             raise FlashcardExtractionError(f"Unknown field {field} in text:\n{text}")
 
         fields[field] = content
+
+    if fields.get("X", "") == "same":
+        fields["X"] = defaults.get("X", "")
 
     return fields
 

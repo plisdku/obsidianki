@@ -1,4 +1,5 @@
 import argparse
+import json
 import random
 import re
 
@@ -66,6 +67,7 @@ def main():
     parser = argparse.ArgumentParser(description="Convert Obsidian Markdown to Anki HTML")
     parser.add_argument("input_file", help="Obsidian markdown file")
     parser.add_argument("output_file", nargs="?", default="", help="Output Anki-compatible file")
+    parser.add_argument("--json", action="store_true", help="Output as JSON instead of json")
     args = parser.parse_args()
 
     with open(args.input_file, "r", encoding="utf-8") as f:
@@ -79,6 +81,7 @@ def main():
     for block in blocks:
         fields = get_flashcard_fields(block, default_block)
 
+        # Always carry over reference, chapter and page
         carryover_keys = ("X", "R", "C", "P")
         default_block = {key: fields[key] for key in carryover_keys if key in fields}
 
@@ -101,30 +104,21 @@ def main():
     if args.output_file:
         # Don't put the header in the file because Anki will make a flashcard out of it.
         df.to_csv(args.output_file, index=False, header=False)
+    elif args.json:
+        # Convert to JSON format
+
+        # pretty-print json
+        # json_data = df.to_json(orient="records", indent=4)
+        # compact json
+        # json_data = df.to_json(orient="records", indent=None)
+
+        json_str = json.dumps(df.to_dict(orient="records"), indent=4)
+
+        print(json_str)
+        # with open(args.output_file, "w", encoding="utf-8") as f:
+        #     f.write(json_data)
     else:
         print(df.to_csv(index=False, header=True))
-
-    # print("\n-----\n".join(blocks))
-
-    # anki_cards = convert_obsidian_to_anki(obsidian_text)
-
-    # # Write to output file in a format Anki can import
-    # with open(args.output_file, "w", encoding="utf-8") as f:
-    #     for card in anki_cards:
-    #         answer = ""
-    #         if "A" in card:
-    #             answer = card["A"]
-    #         if "AA" in card:
-    #             answer += "\n\n" + random.choice(EMOJI) + "\n\n" + card["AA"]
-
-    #         card_text = (
-    #             f"Q:\n{card['Q']}\nA:\n{answer}\nBook:\n{card['Book']}"
-    #             "\nChapter:\n{card['Chapter']}\nPage:\n{card['Page']}\n"
-    #         )
-    #         f.write(card_text)
-    #         f.write("-" * 20 + "\n")
-
-    # print(f"Converted {len(anki_cards)} cards from {args.input_file} to {args.output_file}")
 
 
 if __name__ == "__main__":
