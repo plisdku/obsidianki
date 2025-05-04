@@ -20,8 +20,6 @@ def convert_flashcard_block(block: str) -> str:
             for start, end in substrings:
                 converted_math = convert_math(value[start:end])
                 math_blocks.append(converted_math)
-
-                print(converted_math)
                 
             # Replace substrings with '{MATH_PLACEHOLDER}'
 
@@ -30,7 +28,6 @@ def convert_flashcard_block(block: str) -> str:
             
             print(key)
             print(value)
-
 
 
 def main():
