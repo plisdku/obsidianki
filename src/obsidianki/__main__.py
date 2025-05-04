@@ -127,12 +127,17 @@ def get_flashcard_fields(text: str, defaults: dict[str,str] | None = None) -> di
 def test_get_flashcard_fields():
 
     for answer, book, chapter, page in product(["A", "Answer"], ["Book", "R"], ["C", "Chapter"], ["P", "Page"]):
+        # Swap in equivalent versions of the tags.
+        # Also note some newlines put in there.
         text = dedent(f"""
         What is the capital of France?
         {answer}: Paris
-        {book}: Geography 101
+        {book}:
+        Geography 101
         {chapter}: 2
+
         {page}: 15
+
         """)
 
         fields = get_flashcard_fields(text)
@@ -157,6 +162,96 @@ def test_get_flashcard_fields_default():
 
 test_get_flashcard_fields()
 test_get_flashcard_fields_default()
+
+
+def find_dollar_math_substrings(text: str) -> list[tuple[int,int]]:
+    r"""
+    Find all substrings in the section that are delimited by $ or $$.
+
+    Args:
+        text: Markdown text with math delimiters.
+    Returns:
+        list of start and end indices
+    """
+
+    # This regex matches $, $$, {, and }.
+    delim_pattern = re.compile(r"(\$+|[{}])", re.MULTILINE)
+
+    delims = list(delim_pattern.finditer(text))
+
+    if not delims:
+        return []
+    
+    # Get the start and end indices of the delimited math blocks.
+    #  - An inline math block is delimited by $...$
+    #  - A display math block is delimited by $$...$$
+    #  - Math blocks may contain more $ inside them, within curly braces
+    #  - Further curly braces and $ may be nested to arbitrary depth
+    #
+    # So we want to only find the outermost $ or $$.
+    #
+    # I don't think you'll ever see $$ nested in curly braces. I'm not going
+    # to look for this, but it's a potential problem.
+
+    curly_brace_depth = 0
+    in_math_block = False
+
+    math_starts: list[int] = []
+    math_ends: list[int] = []
+
+    for match in delims:
+        # print("Matched:", match.group(0), "at", match.start(), match.end())
+        delim = match.group(0)
+
+        if delim in ("$", "$$"):
+            if in_math_block:
+                if curly_brace_depth == 0:
+                    in_math_block = False
+                    math_ends.append(match.end())
+                else:
+                    pass
+            else:
+                assert curly_brace_depth == 0, "Should not be counting curly braces outside math blocks"
+                in_math_block = True
+                math_starts.append(match.start())
+        else:
+            if in_math_block:
+                if delim == "{":
+                    curly_brace_depth += 1
+                elif delim == "}":
+                    curly_brace_depth -= 1
+            else:
+                pass
+
+    if in_math_block:
+        raise FlashcardExtractionError(f"A math block beginning at {math_starts[-1]} was not closed with $ or $$")
+
+    if len(math_starts) != len(math_ends):
+        raise FlashcardExtractionError(f"Unmatched math delimiters in text:\n{text}")
+
+    return list(zip(math_starts, math_ends))
+
+def test_find_dollar_math_substrings():
+    text = dedent(r"""
+    This is some text with $inline math$ and $$display math$$.
+    And some more text with $nested {$math$} in it$.
+    And some more text with nested $$display {$m {$at$} h$} in it$$.
+    """)
+
+    # text = dedent(r"""
+    # And some more text with $nested {$math$} in it$.
+    # """)
+
+    math_ranges = find_dollar_math_substrings(text)
+
+    assert text[math_ranges[0][0]:math_ranges[0][1]] == "$inline math$"
+    assert text[math_ranges[1][0]:math_ranges[1][1]] == "$$display math$$"
+    assert text[math_ranges[2][0]:math_ranges[2][1]] == "$nested {$math$} in it$"
+    assert text[math_ranges[3][0]:math_ranges[3][1]] == "$$display {$m {$at$} h$} in it$$"
+
+test_find_dollar_math_substrings()
+
+
 
 exit()
 
