@@ -122,4 +122,4 @@ def test_convert_math():
     assert convert_math("$$x$$") == r"\[x\]"
     assert convert_math("$x < y$") == r"\(x &lt; y\)"
     assert convert_math("$x & y$") == r"\(x &amp; y\)"
-    assert convert_math("$$x\n+\ny$$") == r"\[x<br>+<br>y\]"
+    assert convert_math("$$x\n+\ny$$") == "\\[x<br>\n+<br>\ny\\]"
