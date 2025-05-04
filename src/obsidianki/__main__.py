@@ -1,6 +1,7 @@
 import re
 from textwrap import dedent
 import pytest
+from itertools import product
 
 class FlashcardExtractionError(Exception):
     pass
@@ -83,7 +84,81 @@ test_extract_no_flashcards()
 test_extract_unclosed_flashcard()
 
 
+def get_flashcard_fields(text: str, defaults: dict[str,str] | None = None) -> dict[str,str]:
+    """
+    Split Q, A and other fields and return them as a dict.
+    """
+    if defaults is None:
+        defaults = {}
 
+    fields = defaults.copy()
+
+    field_pattern = re.compile(r"^(A|Answer|X|Extra|R|Reference|Book|C|Chapter|P|Page):", re.MULTILINE)
+    
+    matches = list(field_pattern.finditer(text))
+
+    starts = [0] + [match.end() for match in matches]
+    ends = [match.start() for match in matches] + [len(text)]
+
+    fields["Q"] = text[starts[0]:ends[0]].strip()
+
+    for idx, match in enumerate(matches):
+        field = match.group(1)
+
+        content = text[starts[idx+1]:ends[idx+1]].strip()
+
+        if field in ("A", "Answer"):
+            field = "A"
+        elif field in ("X", "Extra"):
+            field = "X"
+        elif field in ("R", "Reference", "Book"):
+            field = "R"
+        elif field in ("C", "Chapter"):
+            field = "C"
+        elif field in ("P", "Page"):
+            field = "P"
+        else:
+            raise FlashcardExtractionError(f"Unknown field {field} in text:\n{text}")
+        
+        fields[field] = content
+    
+    return fields
+
+def test_get_flashcard_fields():
+
+    for answer, book, chapter, page in product(["A", "Answer"], ["Book", "R"], ["C", "Chapter"], ["P", "Page"]):
+        text = dedent(f"""
+        What is the capital of France?
+        {answer}: Paris
+        {book}: Geography 101
+        {chapter}: 2
+        {page}: 15
+        """)
+
+        fields = get_flashcard_fields(text)
+        assert fields["Q"] == "What is the capital of France?"
+        assert fields["A"] == "Paris"
+        assert fields["R"] == "Geography 101"
+        assert fields["C"] == "2"
+        assert fields["P"] == "15"
+
+def test_get_flashcard_fields_default():
+    text = dedent(r"""
+    What is the capital of France?
+    """)
+
+    fields = get_flashcard_fields(text, defaults={"Q": "What is the capital of France?", "A": "Paris", "P": "15"})
+
+    assert fields == {
+        "Q": "What is the capital of France?",
+        "A": "Paris",
+        "P": "15"
+    }
+
+test_get_flashcard_fields()
+test_get_flashcard_fields_default()
+
+exit()
 
 def main():
     import argparse
