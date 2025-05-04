@@ -4,16 +4,38 @@ from obsidianki.convert import (
     find_dollar_math_substrings,
     convert_math
 )
+from markdown2 import markdown, Markdown
+import argparse
+import pandas as pd
+import random
+from obsidianki.my_emoji import EMOJI
+import re
 
-def convert_flashcard_block(block: str) -> str:
+def protect_urls(md: str) -> str:
+    """Wrap bare URLs in angle brackets to stop underscore parsing."""
+    url_pattern = re.compile(r'(?<![\(<\[])'  # not already in (), <>, or []
+                             r'(https?://[^\s<>\]\)]+)', re.IGNORECASE)
+    return url_pattern.sub(r'<\1>', md)
+
+
+def remove_backticks_python(value: str) -> str:
+    """
+    Remove backticks from Python code blocks.
+    """
+    # Remove 'python' from code blocks
+    return value.replace("```python", "```")
+
+
+def convert_flashcard_block(fields: dict[str,str]) -> dict[str,str]:
     """
     Turn a markdown flashcard block into HTML.
     """
-
-    fields = get_flashcard_fields(block)
-
     for key, value in fields.items():
-        if key in ("Q", "A", "AA"):
+        value = value.strip()
+        if not value:
+            continue
+        
+        if key in ("Q", "A", "X"):
             substrings = find_dollar_math_substrings(value)
 
             math_blocks = []
@@ -21,17 +43,23 @@ def convert_flashcard_block(block: str) -> str:
                 converted_math = convert_math(value[start:end])
                 math_blocks.append(converted_math)
                 
-            # Replace substrings with '{MATH_PLACEHOLDER}'
+            # Replace substrings with '{MATHPLACEHOLDER}'
 
             for start, end in reversed(substrings):
-                value = value[:start] + "{MATH_PLACEHOLDER}" + value[end:]
+                value = value[:start] + "{MATHPLACEHOLDER}" + value[end:]
             
-            print(key)
-            print(value)
+            html_content = markdown(protect_urls(remove_backticks_python(value)), extras=["break-on-newline", "tables", "cuddled-lists"])
+
+            # Replace '{MATHPLACEHOLDER}' with math blocks
+            for math_block in math_blocks:
+                html_content = html_content.replace("{MATHPLACEHOLDER}", math_block, 1)
+            
+            fields[key] = html_content
+    
+    return fields
 
 
 def main():
-    import argparse
 
     parser = argparse.ArgumentParser(description="Convert Obsidian Markdown to Anki HTML")
     parser.add_argument("input_file", help="Obsidian markdown file")
@@ -43,9 +71,36 @@ def main():
 
     blocks = extract_flashcard_blocks(obsidian_text)
 
+    card_dicts: list[dict[str, str]] = []
+
+    default_block = {"Q": "", "A": "", "X": "", "R": "", "C": "", "P": ""}
     for block in blocks:
-        block = convert_flashcard_block(block)
-        # print(block)
+        fields = get_flashcard_fields(block, default_block)
+
+        carryover_keys = ("X", "R", "C", "P")
+        default_block = {key: fields[key] for key in carryover_keys if key in fields}
+
+        card_dict = convert_flashcard_block(fields)
+
+        extra = card_dict.get("X", "").strip()
+
+        if extra:
+            # I used to add two newlines around the emoji, but my output has <p> and
+            # doesn't seem to need extra space.
+            card_dict["A"] = card_dict.get("A", "") + random.choice(EMOJI) + extra
+
+        card_dicts.append(card_dict)
+
+    df = pd.DataFrame(card_dicts)
+
+    df.rename(columns={"Q": "Front", "A": "Back", "R": "Reference", "C": "Chapter", "P": "Page"}, inplace=True)
+    df = df[["Front", "Back", "Reference", "Chapter", "Page"]]
+
+    if args.output_file:
+        # Don't put the header in the file because Anki will make a flashcard out of it.
+        df.to_csv(args.output_file, index=False, header=False)
+    else:
+        print(df.to_csv(index=False, header=True))
 
 
     # print("\n-----\n".join(blocks))
