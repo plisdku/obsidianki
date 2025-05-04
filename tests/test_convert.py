@@ -55,7 +55,7 @@ def test_extract_unclosed_flashcard():
     """
     )
 
-    with pytest.raises(FlashcardExtractionError) as excinfo:
+    with pytest.raises(FlashcardExtractionError):
         extract_flashcard_blocks(text)
 
 
