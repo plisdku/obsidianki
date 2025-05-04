@@ -1,10 +1,12 @@
 import re
 import html
 
+
 class FlashcardExtractionError(Exception):
     pass
 
-def extract_flashcard_blocks(text: str, strip:bool = True) -> list[str]:
+
+def extract_flashcard_blocks(text: str, strip: bool = True) -> list[str]:
     """
     Extract flashcard blocks from the given text.
     Flashcards are delimited by "flashcard:" starting tokens and ":flashcard" ending tokens.
@@ -17,29 +19,36 @@ def extract_flashcard_blocks(text: str, strip:bool = True) -> list[str]:
     """
 
     lines = text.splitlines()
-    line_ranges: list[tuple[int,int]] = []
+    line_ranges: list[tuple[int, int]] = []
 
-    prev_start: int | None = None # first line of the block, excluding the starting token
-    
+    prev_start: int | None = (
+        None  # first line of the block, excluding the starting token
+    )
+
     for idx, line in enumerate(lines):
         if line == ":flashcard:":
             if prev_start is not None:
                 line_ranges.append((prev_start, idx))
-            prev_start = idx+1
+            prev_start = idx + 1
         elif line == "::":
             if prev_start is not None:
                 line_ranges.append((prev_start, idx))
             prev_start = None
-    
+
     if prev_start is not None:
-        raise FlashcardExtractionError(f"A flashcard block beginning on line {prev_start} was not closed with a ::")
+        raise FlashcardExtractionError(
+            f"A flashcard block beginning on line {prev_start} was not closed with a ::"
+        )
 
     blocks = ["\n".join(lines[start:end]) for start, end in line_ranges]
     if strip:
         blocks = [block.strip() for block in blocks]
     return blocks
 
-def get_flashcard_fields(text: str, defaults: dict[str,str] | None = None) -> dict[str,str]:
+
+def get_flashcard_fields(
+    text: str, defaults: dict[str, str] | None = None
+) -> dict[str, str]:
     """
     Split Q, A and other fields and return them as a dict.
     """
@@ -48,19 +57,21 @@ def get_flashcard_fields(text: str, defaults: dict[str,str] | None = None) -> di
 
     fields = defaults.copy()
 
-    field_pattern = re.compile(r"^(A|Answer|X|Extra|R|Reference|Book|C|Chapter|P|Page):", re.MULTILINE)
-    
+    field_pattern = re.compile(
+        r"^(A|Answer|X|Extra|R|Reference|Book|C|Chapter|P|Page):", re.MULTILINE
+    )
+
     matches = list(field_pattern.finditer(text))
 
     starts = [0] + [match.end() for match in matches]
     ends = [match.start() for match in matches] + [len(text)]
 
-    fields["Q"] = text[starts[0]:ends[0]].strip()
+    fields["Q"] = text[starts[0] : ends[0]].strip()
 
     for idx, match in enumerate(matches):
         field = match.group(1)
 
-        content = text[starts[idx+1]:ends[idx+1]].strip()
+        content = text[starts[idx + 1] : ends[idx + 1]].strip()
 
         if field in ("A", "Answer"):
             field = "A"
@@ -74,13 +85,13 @@ def get_flashcard_fields(text: str, defaults: dict[str,str] | None = None) -> di
             field = "P"
         else:
             raise FlashcardExtractionError(f"Unknown field {field} in text:\n{text}")
-        
+
         fields[field] = content
-    
+
     return fields
 
 
-def find_dollar_math_substrings(text: str) -> list[tuple[int,int]]:
+def find_dollar_math_substrings(text: str) -> list[tuple[int, int]]:
     r"""
     Find all substrings in the section that are delimited by $ or $$.
 
@@ -97,7 +108,7 @@ def find_dollar_math_substrings(text: str) -> list[tuple[int,int]]:
 
     if not delims:
         return []
-    
+
     # Get the start and end indices of the delimited math blocks.
     #  - An inline math block is delimited by $...$
     #  - A display math block is delimited by $$...$$
@@ -127,7 +138,9 @@ def find_dollar_math_substrings(text: str) -> list[tuple[int,int]]:
                 else:
                     pass
             else:
-                assert curly_brace_depth == 0, "Should not be counting curly braces outside math blocks"
+                assert (
+                    curly_brace_depth == 0
+                ), "Should not be counting curly braces outside math blocks"
                 in_math_block = True
                 math_starts.append(match.start())
         else:
@@ -140,12 +153,15 @@ def find_dollar_math_substrings(text: str) -> list[tuple[int,int]]:
                 pass
 
     if in_math_block:
-        raise FlashcardExtractionError(f"A math block beginning at {math_starts[-1]} was not closed with $ or $$")
+        raise FlashcardExtractionError(
+            f"A math block beginning at {math_starts[-1]} was not closed with $ or $$"
+        )
 
     if len(math_starts) != len(math_ends):
         raise FlashcardExtractionError(f"Unmatched math delimiters in text:\n{text}")
 
     return list(zip(math_starts, math_ends))
+
 
 def convert_math(content: str) -> str:
     r"""
@@ -167,4 +183,3 @@ def convert_math(content: str) -> str:
     sanitized_content = sanitized_content.replace("\n", "<br>")
 
     return delims[0] + sanitized_content + delims[1]
-

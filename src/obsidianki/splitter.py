@@ -5,16 +5,17 @@ import random
 
 from obsidianki.my_emoji import EMOJI
 
+
 def split_between_matches(contents, matches):
     """
     Split the contents between the matches.
     """
     match_contents = []
-    match_contents.append(contents[:matches[0].start()])
-    for idx in range(len(matches)-1):
-        match_content = contents[matches[idx].end():matches[idx+1].start()]
+    match_contents.append(contents[: matches[0].start()])
+    for idx in range(len(matches) - 1):
+        match_content = contents[matches[idx].end() : matches[idx + 1].start()]
         match_contents.append(match_content)
-    match_contents.append(contents[matches[-1].end():])
+    match_contents.append(contents[matches[-1].end() :])
     return match_contents
 
 
@@ -24,7 +25,9 @@ def split_sections(contents):
     """
     # Define a regex pattern to match the tags
     # tag_pattern = re.compile(r"^\s?(✅)?\s?([A-Za-z ]+):", re.MULTILINE)
-    tag_pattern = re.compile(r"^\s*(✅)?\s*[*_]*([A-Za-z ]+)[*_]*\s*:[*_]*", re.MULTILINE)
+    tag_pattern = re.compile(
+        r"^\s*(✅)?\s*[*_]*([A-Za-z ]+)[*_]*\s*:[*_]*", re.MULTILINE
+    )
 
     # Find all matches for the tag pattern
     matches = list(tag_pattern.finditer(contents))
@@ -43,7 +46,7 @@ def convert_math_delims(section: str) -> str:
     Convert math delimiters in the section.
         - $...$ becomes \(...\)
         - $$...$$ becomes \[...\]
-        
+
     Args:
         section (str): The section to convert.
     Returns:
@@ -89,16 +92,19 @@ def convert_math_delims(section: str) -> str:
             curly_brace_depth -= 1
         else:
             assert "unexpected token"
-        
+
         out.append(delim)
         out.append(between)
 
     return "".join(out)
 
 
-fname = pathlib.Path("/Users/paul/Documents/Obsidian Vault/Math notes/Atakishiyev, On Classical Orthogonal Polynomials.md").absolute()
+fname = pathlib.Path(
+    "/Users/paul/Documents/Obsidian Vault/Math notes/Atakishiyev, On Classical Orthogonal Polynomials.md"
+).absolute()
 with open(fname) as fh:
     contents = fh.read()
+
 
 def convert_obsidian_to_anki(contents: str) -> str:
     tags = {
@@ -109,13 +115,12 @@ def convert_obsidian_to_anki(contents: str) -> str:
         "Book": "",
         "Page": "",
         "Chapter": "",
-        "Tags": ""
+        "Tags": "",
     }
 
     out_cards = []
     card = {}
     for token, section in split_sections(contents):
-
         emoji, token_type = token.groups()
         if emoji == "✅":
             pass
@@ -134,37 +139,41 @@ def convert_obsidian_to_anki(contents: str) -> str:
             card["Page"] = tags["Page"]
         else:
             card[token_type] = tags[token_type]
-    
+
     return out_cards
 
 
 def main():
     import argparse
-    
-    parser = argparse.ArgumentParser(description="Convert Obsidian Markdown to Anki HTML")
+
+    parser = argparse.ArgumentParser(
+        description="Convert Obsidian Markdown to Anki HTML"
+    )
     parser.add_argument("input_file", help="Obsidian markdown file")
     parser.add_argument("output_file", help="Output Anki-compatible file")
     args = parser.parse_args()
-    
-    with open(args.input_file, 'r', encoding='utf-8') as f:
+
+    with open(args.input_file, "r", encoding="utf-8") as f:
         obsidian_text = f.read()
-    
+
     anki_cards = convert_obsidian_to_anki(obsidian_text)
 
     # Write to output file in a format Anki can import
-    with open(args.output_file, 'w', encoding='utf-8') as f:
+    with open(args.output_file, "w", encoding="utf-8") as f:
         for card in anki_cards:
             answer = ""
             if "A" in card:
                 answer = card["A"]
             if "AA" in card:
                 answer += "\n\n" + random.choice(EMOJI) + "\n\n" + card["AA"]
-            
+
             card_text = f"Q:\n{card['Q']}\nA:\n{answer}\nBook:\n{card['Book']}\nChapter:\n{card['Chapter']}\nPage:\n{card['Page']}\n"
             f.write(card_text)
-            f.write("-"*20 + "\n")
-    
-    print(f"Converted {len(anki_cards)} cards from {args.input_file} to {args.output_file}")
+            f.write("-" * 20 + "\n")
+
+    print(
+        f"Converted {len(anki_cards)} cards from {args.input_file} to {args.output_file}"
+    )
 
 
 if __name__ == "__main__":

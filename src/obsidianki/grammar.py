@@ -21,7 +21,6 @@ import pprint
 # """
 
 
-
 grammar = r"""
     start: (math | non_math)*
     non_math: /[^$]+/
@@ -48,12 +47,13 @@ $$
 """
 
 print(example)
-print("-"*20)
+print("-" * 20)
 
 parser = lark.Lark(grammar)
 tree = parser.parse(example)
 # pprint.pprint(tree)
 print(tree.pretty())
+
 
 class MyTransformer(lark.Transformer):
     def non_math(self, items):
