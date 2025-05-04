@@ -1,6 +1,7 @@
 import re
 from textwrap import dedent
 import pytest
+import html
 from itertools import product
 
 class FlashcardExtractionError(Exception):
@@ -251,7 +252,35 @@ def test_find_dollar_math_substrings():
 
 test_find_dollar_math_substrings()
 
+def convert_math(content: str) -> str:
+    r"""
+    Convert a math block delimited by $ or $$ to one delimited by \( \) or \[ \],
+    and sanitize it for html.
+    """
+    if content.startswith("$$"):
+        assert content.endswith("$$")
+        inner_content = content[2:-2]
+        delims = (r"\[", r"\]")
+    elif content.startswith("$"):
+        if len(content) > 2:
+            assert not content.endswith("$$")
+        assert content.endswith("$")
+        inner_content = content[1:-1]
+        delims = (r"\(", r"\)")
 
+    sanitized_content = html.escape(inner_content)
+    sanitized_content = sanitized_content.replace("\n", "<br>")
+
+    return delims[0] + sanitized_content + delims[1]
+
+def test_convert_math():
+    assert convert_math("$x$") == r"\(x\)"
+    assert convert_math("$$x$$") == r"\[x\]"
+    assert convert_math("$x < y$") == r"\(x &lt; y\)"
+    assert convert_math("$x & y$") == r"\(x &amp; y\)"
+    assert convert_math("$$x\n+\ny$$") == r"\[x<br>+<br>y\]"
+
+test_convert_math()
 
 exit()
 
