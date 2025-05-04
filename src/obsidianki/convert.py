@@ -166,8 +166,10 @@ def convert_math(content: str) -> str:
         assert content.endswith("$")
         inner_content = content[1:-1]
         delims = (r"\(", r"\)")
+    else:
+        raise FlashcardExtractionError(f"Invalid math block: {content}")
 
     sanitized_content = html.escape(inner_content)
-    sanitized_content = sanitized_content.replace("\n", "<br>")
+    sanitized_content = sanitized_content.replace("\n", "<br>\n")
 
     return delims[0] + sanitized_content + delims[1]
