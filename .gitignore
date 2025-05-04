@@ -170,3 +170,8 @@ notes/.obsidian
 
 # VSCode
 .vscode
+
+# JSON
+*.json
+*.html
+*.txt
