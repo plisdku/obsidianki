@@ -23,7 +23,8 @@ def split_sections(contents):
     Split the contents into sections based on the tags in the text.
     """
     # Define a regex pattern to match the tags
-    tag_pattern = re.compile(r"^\s?(✅)?\s?([A-Za-z ]+):", re.MULTILINE)
+    # tag_pattern = re.compile(r"^\s?(✅)?\s?([A-Za-z ]+):", re.MULTILINE)
+    tag_pattern = re.compile(r"^\s*(✅)?\s*[*_]*([A-Za-z ]+)[*_]*\s*:[*_]*", re.MULTILINE)
 
     # Find all matches for the tag pattern
     matches = list(tag_pattern.finditer(contents))
@@ -122,9 +123,12 @@ def convert_obsidian_to_anki(contents: str) -> str:
         tags[token_type] = value.strip()
 
         if token_type == "Q":
+            # Once we hit a new "Q" we flush the old card.
             card = {}
             out_cards.append(card)
             card["Q"] = tags["Q"]
+            if "A" in card:
+                del card["A"]
             card["Book"] = tags["Book"]
             card["Chapter"] = tags["Chapter"]
             card["Page"] = tags["Page"]
@@ -150,16 +154,17 @@ def main():
     # Write to output file in a format Anki can import
     with open(args.output_file, 'w', encoding='utf-8') as f:
         for card in anki_cards:
-            if "AA" in card:
-                answer = card["A"] + "\n\n" + random.choice(EMOJI) + "\n\n" + card["AA"]
-            else:
+            answer = ""
+            if "A" in card:
                 answer = card["A"]
+            if "AA" in card:
+                answer += "\n\n" + random.choice(EMOJI) + "\n\n" + card["AA"]
             
             card_text = f"Q:\n{card['Q']}\nA:\n{answer}\nBook:\n{card['Book']}\nChapter:\n{card['Chapter']}\nPage:\n{card['Page']}\n"
             f.write(card_text)
             f.write("-"*20 + "\n")
     
-    # print(f"Converted {len(anki_cards)} cards from {args.input_file} to {args.output_file}")
+    print(f"Converted {len(anki_cards)} cards from {args.input_file} to {args.output_file}")
 
 
 if __name__ == "__main__":
