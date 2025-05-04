@@ -45,6 +45,9 @@ def extract_flashcard_blocks(text: str, strip: bool = True) -> list[str]:
 def get_flashcard_fields(text: str, defaults: dict[str, str] | None = None) -> dict[str, str]:
     """
     Split Q, A and other fields and return them as a dict.
+
+    If P, R or C is present in defaults, will use that as the default.
+    If X is present in the defaults, and the X field is "same", will use the default value.
     """
     if defaults is None:
         defaults = {}
