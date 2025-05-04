@@ -1,6 +1,36 @@
 from obsidianki.convert import (
     extract_flashcard_blocks,
+    get_flashcard_fields,
+    find_dollar_math_substrings,
+    convert_math
 )
+
+def convert_flashcard_block(block: str) -> str:
+    """
+    Turn a markdown flashcard block into HTML.
+    """
+
+    fields = get_flashcard_fields(block)
+
+    for key, value in fields.items():
+        if key in ("Q", "A", "AA"):
+            substrings = find_dollar_math_substrings(value)
+
+            math_blocks = []
+            for start, end in substrings:
+                converted_math = convert_math(value[start:end])
+                math_blocks.append(converted_math)
+
+                print(converted_math)
+                
+            # Replace substrings with '{MATH_PLACEHOLDER}'
+
+            for start, end in reversed(substrings):
+                value = value[:start] + "{MATH_PLACEHOLDER}" + value[end:]
+            
+            print(key)
+            print(value)
+
 
 
 def main():
@@ -16,7 +46,12 @@ def main():
 
     blocks = extract_flashcard_blocks(obsidian_text)
 
-    print("\n-----\n".join(blocks))
+    for block in blocks:
+        block = convert_flashcard_block(block)
+        # print(block)
+
+
+    # print("\n-----\n".join(blocks))
 
     # anki_cards = convert_obsidian_to_anki(obsidian_text)
 
