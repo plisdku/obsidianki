@@ -1,10 +1,10 @@
-import pathlib
+import importlib.resources
 
 
 def load_emoji():
-    empath = pathlib.Path(__file__).parent / "good_mac_emoji.txt"
-    with open(empath) as fh:
-        ee = fh.read().splitlines()
+    # Use importlib.resources to load the resource from the package
+    with importlib.resources.open_text("obsidianki", "good_mac_emoji.txt") as file:
+        ee = file.read().splitlines()
     return ee
 
 

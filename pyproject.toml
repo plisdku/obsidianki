@@ -22,6 +22,12 @@ dev = [
 requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+obsidianki = ["good_mac_emoji.txt"]
+
 [project.scripts]
 obsidianki = "obsidianki.__main__:main"
 
