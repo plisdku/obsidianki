@@ -73,6 +73,10 @@ def main():
     parser.add_argument("input_file", help="Obsidian markdown file")
     parser.add_argument("output_file", nargs="?", default="", help="Output Anki-compatible file")
     parser.add_argument("--json", action="store_true", help="Output as JSON instead of json")
+    parser.add_argument(
+        "--all",
+        help="Output cards with a checkmark in the question (they will be omitted by default)",
+    )
     args = parser.parse_args()
 
     with open(args.input_file, "r", encoding="utf-8") as f:
@@ -115,6 +119,9 @@ def main():
     )
     df = df[["Front", "Back", "Reference", "Chapter", "Page"]]
 
+    if not args.all:
+        df.query("~Front.str.contains('✅')", inplace=True)
+
     if args.output_file:
         # Don't put the header in the file because Anki will make a flashcard out of it.
         df.to_csv(args.output_file, index=False, header=False)
@@ -133,6 +140,11 @@ def main():
         #     f.write(json_data)
     else:
         print(df.to_csv(index=False, header=True))
+
+    print()
+    print("SUMMARY:")
+    print(f"Found {len(card_dicts)} cards.")
+    print(f"Output {len(df)} records.")
 
 
 if __name__ == "__main__":
