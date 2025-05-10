@@ -6,15 +6,19 @@ import re
 import pandas as pd
 from markdown2 import markdown
 
-from obsidianki.convert import convert_math, extract_flashcard_blocks, find_dollar_math_substrings, get_flashcard_fields
+from obsidianki.convert import (
+    convert_math,
+    extract_flashcard_blocks,
+    find_dollar_math_substrings,
+    get_flashcard_fields,
+)
 from obsidianki.my_emoji import EMOJI
 
 
 def protect_urls(md: str) -> str:
     """Wrap bare URLs in angle brackets to stop underscore parsing."""
     url_pattern = re.compile(
-        r"(?<![\(<\[])"  # not already in (), <>, or []
-        r"(https?://[^\s<>\]\)]+)",
+        r"(?<![\(<\[])" r"(https?://[^\s<>\]\)]+)",  # not already in (), <>, or []
         re.IGNORECASE,
     )
     return url_pattern.sub(r"<\1>", md)
@@ -51,7 +55,8 @@ def convert_flashcard_block(fields: dict[str, str]) -> dict[str, str]:
                 value = value[:start] + "{MATHPLACEHOLDER}" + value[end:]
 
             html_content = markdown(
-                protect_urls(remove_backticks_python(value)), extras=["break-on-newline", "tables", "cuddled-lists"]
+                protect_urls(remove_backticks_python(value)),
+                extras=["break-on-newline", "tables", "cuddled-lists"],
             )
 
             # Replace '{MATHPLACEHOLDER}' with math blocks
@@ -98,7 +103,16 @@ def main():
 
     df = pd.DataFrame(card_dicts)
 
-    df.rename(columns={"Q": "Front", "A": "Back", "R": "Reference", "C": "Chapter", "P": "Page"}, inplace=True)
+    df.rename(
+        columns={
+            "Q": "Front",
+            "A": "Back",
+            "R": "Reference",
+            "C": "Chapter",
+            "P": "Page",
+        },
+        inplace=True,
+    )
     df = df[["Front", "Back", "Reference", "Chapter", "Page"]]
 
     if args.output_file:
