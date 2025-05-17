@@ -75,6 +75,7 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output as JSON instead of json")
     parser.add_argument(
         "--all",
+        action="store_true",
         help="Output cards with a checkmark in the question (they will be omitted by default)",
     )
     args = parser.parse_args()
@@ -105,7 +106,7 @@ def main():
 
         card_dicts.append(card_dict)
 
-    df = pd.DataFrame(card_dicts)
+    df = pd.DataFrame(card_dicts, columns=("Q", "A", "R", "C", "P"))
 
     df.rename(
         columns={
