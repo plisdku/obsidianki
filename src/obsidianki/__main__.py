@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import random
 import re
 
@@ -24,12 +25,11 @@ def protect_urls(md: str) -> str:
     return url_pattern.sub(r"<\1>", md)
 
 
-def remove_backticks_python(value: str) -> str:
+def remove_backticks_language(value: str) -> str:
     """
-    Remove backticks from Python code blocks.
+    Remove any language name from fenced code blocks
     """
-    # Remove 'python' from code blocks
-    return value.replace("```python", "```")
+    return re.sub(r"```[^\n]*", "```", value)
 
 
 def convert_flashcard_block(fields: dict[str, str]) -> dict[str, str]:
@@ -55,8 +55,13 @@ def convert_flashcard_block(fields: dict[str, str]) -> dict[str, str]:
                 value = value[:start] + "{MATHPLACEHOLDER}" + value[end:]
 
             html_content = markdown(
-                protect_urls(remove_backticks_python(value)),
-                extras=["break-on-newline", "tables", "cuddled-lists"],
+                protect_urls(value),
+                extras=[
+                    "break-on-newline",
+                    "tables",
+                    "cuddled-lists",
+                    "fenced-code-blocks",
+                ],
             )
 
             # Replace '{MATHPLACEHOLDER}' with math blocks
@@ -71,12 +76,24 @@ def convert_flashcard_block(fields: dict[str, str]) -> dict[str, str]:
 def main():
     parser = argparse.ArgumentParser(description="Convert Obsidian Markdown to Anki HTML")
     parser.add_argument("input_file", help="Obsidian markdown file")
-    parser.add_argument("output_file", nargs="?", default="", help="Output Anki-compatible file")
+    # parser.add_argument(
+    #     "output_file", nargs="?", default="", help="Output Anki-compatible file"
+    # )
     parser.add_argument("--json", action="store_true", help="Output as JSON instead of json")
     parser.add_argument(
         "--all",
         action="store_true",
         help="Output cards with a checkmark in the question (they will be omitted by default)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output-file",
+        nargs="?",
+        const="",  # If user passes --output-file without filename, const="" triggers
+        help=(
+            "Output Anki-compatible file. If no filename given, defaults to input filename with .csv extension. "
+            "If omitted, prints to stdout."
+        ),
     )
     args = parser.parse_args()
 
@@ -106,7 +123,7 @@ def main():
 
         card_dicts.append(card_dict)
 
-    df = pd.DataFrame(card_dicts, columns=("Q", "A", "R", "C", "P"))
+    df = pd.DataFrame(card_dicts, columns=["Q", "A", "R", "C", "P"])
 
     df.rename(
         columns={
@@ -123,24 +140,31 @@ def main():
     if not args.all:
         df.query("~Front.str.contains('✅')", inplace=True)
 
-    if args.output_file:
+    if args.output_file is None:
         # Don't put the header in the file because Anki will make a flashcard out of it.
-        df.to_csv(args.output_file, index=False, header=False)
-    elif args.json:
-        # Convert to JSON format
 
-        # pretty-print json
-        # json_data = df.to_json(orient="records", indent=4)
-        # compact json
-        # json_data = df.to_json(orient="records", indent=None)
+        if args.json:
+            # Convert to JSON format
 
-        json_str = json.dumps(df.to_dict(orient="records"), indent=4)
+            # pretty-print json
+            # json_data = df.to_json(orient="records", indent=4)
+            # compact json
+            # json_data = df.to_json(orient="records", indent=None)
 
-        print(json_str)
-        # with open(args.output_file, "w", encoding="utf-8") as f:
-        #     f.write(json_data)
+            json_str = json.dumps(df.to_dict(orient="records"), indent=4)
+
+            print(json_str)
+            # with open(args.output_file, "w", encoding="utf-8") as f:
+            #     f.write(json_data)
+        else:
+            print(df.to_csv(index=False, header=True))
     else:
-        print(df.to_csv(index=False, header=True))
+        assert not args.json
+
+        if args.output_file == "":
+            base, ext = os.path.splitext(args.input_file)
+            args.output_file = f"{base}.csv"
+            df.to_csv(args.output_file, index=False, header=False)
 
     print()
     print("SUMMARY:")
