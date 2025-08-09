@@ -175,3 +175,6 @@ notes/.obsidian
 *.json
 *.html
 *.txt
+
+# CSV
+*.csv
