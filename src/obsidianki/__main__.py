@@ -7,6 +7,7 @@ import re
 import pandas as pd
 from markdown2 import markdown
 
+from obsidianki.ankiconnect import DEFAULT_DECK, add_notes_via_ankiconnect
 from obsidianki.convert import (
     convert_math,
     extract_flashcard_blocks,
@@ -95,6 +96,24 @@ def main():
             "If omitted, prints to stdout."
         ),
     )
+    parser.add_argument(
+        "--anki-connect",
+        action="store_true",
+        help="Add cards directly to a running Anki instance via AnkiConnect, instead of writing a CSV/JSON file.",
+    )
+    parser.add_argument(
+        "--deck",
+        default=DEFAULT_DECK,
+        help=(
+            "Deck name to add cards to when using --anki-connect. Use Anki's "
+            "Parent::Child syntax for subdecks (default: All::New)."
+        ),
+    )
+    parser.add_argument(
+        "--model-name",
+        default="PCH Math Basic",
+        help="Anki note type to use when using --anki-connect (default: PCH Math Basic).",
+    )
     args = parser.parse_args()
 
     with open(args.input_file, "r", encoding="utf-8") as f:
@@ -140,7 +159,11 @@ def main():
     if not args.all:
         df.query("~Front.str.contains('✅')", inplace=True)
 
-    if args.output_file is None:
+    if args.anki_connect:
+        assert not args.json
+        assert args.output_file is None
+        add_notes_via_ankiconnect(df, deck=args.deck, model_name=args.model_name)
+    elif args.output_file is None:
         # Don't put the header in the file because Anki will make a flashcard out of it.
 
         if args.json:
