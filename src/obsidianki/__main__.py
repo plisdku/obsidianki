@@ -16,6 +16,7 @@ from obsidianki.convert import (
     mark_flashcards_exported,
     parse_tags,
 )
+from obsidianki.definition_tags import tag_definitions
 from obsidianki.my_emoji import EMOJI
 
 
@@ -119,10 +120,24 @@ def main():
         default="PCH Math Basic",
         help="Anki note type to use when using --anki-connect (default: PCH Math Basic).",
     )
+    parser.add_argument(
+        "--tag-definitions",
+        action="store_true",
+        help="Ask Gemini to add T: definition to definition cards, then exit.",
+    )
+    parser.add_argument("--gemini-model", default="gemini-3.6-flash", help="Gemini model for --tag-definitions.")
     args = parser.parse_args()
 
     with open(args.input_file, "r", encoding="utf-8") as f:
         obsidian_text = f.read()
+
+    if args.tag_definitions:
+        try:
+            count = tag_definitions(args.input_file, model=args.gemini_model)
+        except RuntimeError as exc:
+            parser.error(str(exc))
+        print(f"Added T: definition to {count} card(s).")
+        return
 
     blocks = extract_flashcard_blocks(obsidian_text)
 
