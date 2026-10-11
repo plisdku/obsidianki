@@ -42,6 +42,32 @@ def extract_flashcard_blocks(text: str, strip: bool = True) -> list[str]:
     return blocks
 
 
+def mark_flashcards_exported(text: str, exported_indices: set[int]) -> str:
+    """Add the export marker to selected flashcard questions."""
+    lines = text.splitlines(keepends=True)
+    output: list[str] = []
+    card_index = -1
+    in_card = False
+    marked_question = False
+
+    for line in lines:
+        marker = line.rstrip("\r\n")
+        if marker == ":flashcard:":
+            card_index += 1
+            in_card = True
+            marked_question = False
+        elif marker == "::":
+            in_card = False
+        elif in_card and not marked_question and line.strip():
+            if card_index in exported_indices and not line.lstrip().startswith("✅"):
+                indentation = line[: len(line) - len(line.lstrip())]
+                line = indentation + "✅" + line[len(indentation) :]
+            marked_question = True
+        output.append(line)
+
+    return "".join(output)
+
+
 def get_flashcard_fields(text: str, defaults: dict[str, str] | None = None) -> dict[str, str]:
     """
     Split Q, A and other fields and return them as a dict.
@@ -55,7 +81,7 @@ def get_flashcard_fields(text: str, defaults: dict[str, str] | None = None) -> d
     carryover_fields = ("R", "C", "P")
     fields = {**{key: defaults[key] for key in carryover_fields if key in defaults}}
 
-    field_pattern = re.compile(r"^(A|Answer|X|Extra|R|Reference|Book|C|Chapter|P|Page):", re.MULTILINE)
+    field_pattern = re.compile(r"^(A|Answer|X|Extra|R|Reference|Book|C|Chapter|P|Page|T):", re.MULTILINE)
 
     matches = list(field_pattern.finditer(text))
 
@@ -79,6 +105,8 @@ def get_flashcard_fields(text: str, defaults: dict[str, str] | None = None) -> d
             field = "C"
         elif field in ("P", "Page"):
             field = "P"
+        elif field == "T":
+            field = "T"
         else:
             raise FlashcardExtractionError(f"Unknown field {field} in text:\n{text}")
 
@@ -88,6 +116,16 @@ def get_flashcard_fields(text: str, defaults: dict[str, str] | None = None) -> d
         fields["X"] = defaults.get("X", "")
 
     return fields
+
+
+def parse_tags(value: str) -> list[str]:
+    """Convert a card's tag text into the tag names expected by Anki."""
+    tags: list[str] = []
+    for tag in re.split(r"[\s,]+", value.strip()):
+        tag = tag.strip()
+        if tag and tag not in tags:
+            tags.append(tag)
+    return tags
 
 
 def find_dollar_math_substrings(text: str) -> list[tuple[int, int]]:

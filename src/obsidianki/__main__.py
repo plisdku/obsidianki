@@ -13,6 +13,8 @@ from obsidianki.convert import (
     extract_flashcard_blocks,
     find_dollar_math_substrings,
     get_flashcard_fields,
+    mark_flashcards_exported,
+    parse_tags,
 )
 from obsidianki.my_emoji import EMOJI
 
@@ -99,7 +101,10 @@ def main():
     parser.add_argument(
         "--anki-connect",
         action="store_true",
-        help="Add cards directly to a running Anki instance via AnkiConnect, instead of writing a CSV/JSON file.",
+        help=(
+            "Add cards directly to a running Anki instance via AnkiConnect, instead of writing a CSV/JSON file; "
+            "mark exported questions with ✅ in the source Markdown."
+        ),
     )
     parser.add_argument(
         "--deck",
@@ -132,6 +137,7 @@ def main():
         default_block = {key: fields[key] for key in carryover_keys if key in fields}
 
         card_dict = convert_flashcard_block(fields)
+        card_dict["Tags"] = parse_tags(card_dict.pop("T", ""))
 
         extra = card_dict.get("X", "").strip()
 
@@ -142,7 +148,7 @@ def main():
 
         card_dicts.append(card_dict)
 
-    df = pd.DataFrame(card_dicts, columns=["Q", "A", "R", "C", "P"])
+    df = pd.DataFrame(card_dicts, columns=["Q", "A", "R", "C", "P", "Tags"])
 
     df.rename(
         columns={
@@ -151,18 +157,27 @@ def main():
             "R": "Reference",
             "C": "Chapter",
             "P": "Page",
+            "Tags": "Tags",
         },
         inplace=True,
     )
-    df = df[["Front", "Back", "Reference", "Chapter", "Page"]]
+    df = df[["Front", "Back", "Reference", "Chapter", "Page", "Tags"]]
 
     if not args.all:
         df.query("~Front.str.contains('✅')", inplace=True)
 
+    output_df = df.copy()
+    output_df["Tags"] = output_df["Tags"].map(" ".join)
+
     if args.anki_connect:
         assert not args.json
         assert args.output_file is None
-        add_notes_via_ankiconnect(df, deck=args.deck, model_name=args.model_name)
+        exported = add_notes_via_ankiconnect(df, deck=args.deck, model_name=args.model_name)
+        exported_indices = {df.index[index] for index, ok in enumerate(exported) if ok}
+        updated_text = mark_flashcards_exported(obsidian_text, exported_indices)
+        if updated_text != obsidian_text:
+            with open(args.input_file, "w", encoding="utf-8") as f:
+                f.write(updated_text)
     elif args.output_file is None:
         # Don't put the header in the file because Anki will make a flashcard out of it.
 
@@ -174,20 +189,20 @@ def main():
             # compact json
             # json_data = df.to_json(orient="records", indent=None)
 
-            json_str = json.dumps(df.to_dict(orient="records"), indent=4)
+            json_str = json.dumps(output_df.to_dict(orient="records"), indent=4)
 
             print(json_str)
             # with open(args.output_file, "w", encoding="utf-8") as f:
             #     f.write(json_data)
         else:
-            print(df.to_csv(index=False, header=True))
+            print(output_df.to_csv(index=False, header=True))
     else:
         assert not args.json
 
         if args.output_file == "":
             base, ext = os.path.splitext(args.input_file)
             args.output_file = f"{base}.csv"
-            df.to_csv(args.output_file, index=False, header=False)
+            output_df.to_csv(args.output_file, index=False, header=False)
 
     print()
     print("SUMMARY:")

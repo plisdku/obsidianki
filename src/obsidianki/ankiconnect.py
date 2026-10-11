@@ -41,9 +41,9 @@ def add_notes_via_ankiconnect(
     deck: str = DEFAULT_DECK,
     model_name: str = "PCH Math Basic",
     url: str = ANKICONNECT_URL,
-) -> None:
+) -> list[bool]:
     """
-    Send each row of df (columns: Front, Back, Reference, Chapter, Page) to Anki
+    Send each row of df (columns: Front, Back, Reference, Chapter, Page, Tags) to Anki
     as a new note in `deck`, using the `model_name` note type. Use Anki's
     ``Parent::Child`` syntax for a subdeck. Skips notes Anki considers
     duplicates (by first field, scoped to the collection).
@@ -60,14 +60,14 @@ def add_notes_via_ankiconnect(
                 "Page": row.Page,
             },
             "options": {"allowDuplicate": False},
-            "tags": [],
+            "tags": getattr(row, "Tags", []) or [],
         }
         for row in df.itertuples(index=False)
     ]
 
     if not notes:
         print("No cards to add.")
-        return
+        return []
 
     can_add = _invoke("canAddNotes", url=url, notes=notes)
     addable = [note for note, ok in zip(notes, can_add) if ok]
@@ -76,6 +76,14 @@ def add_notes_via_ankiconnect(
     results = _invoke("addNotes", url=url, notes=addable) if addable else []
     added = sum(1 for r in results if r is not None)
 
+    exported = [not ok for ok in can_add]
+    result_index = 0
+    for note_index, ok in enumerate(can_add):
+        if ok:
+            exported[note_index] = results[result_index] is not None
+            result_index += 1
+
     print(f"Added {added} card(s) to deck '{deck}' using note type '{model_name}'.")
     if skipped:
         print(f"Skipped {skipped} likely-duplicate card(s) (already present in the collection).")
+    return exported

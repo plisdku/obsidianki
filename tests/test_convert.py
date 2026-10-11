@@ -9,6 +9,8 @@ from obsidianki.convert import (
     extract_flashcard_blocks,
     find_dollar_math_substrings,
     get_flashcard_fields,
+    mark_flashcards_exported,
+    parse_tags,
 )
 
 
@@ -59,6 +61,44 @@ def test_extract_unclosed_flashcard():
         extract_flashcard_blocks(text)
 
 
+def test_mark_flashcards_exported():
+    text = dedent(
+        """
+        :flashcard:
+        First question
+        A: First answer
+        ::
+        :flashcard:
+        ✅Already exported
+        A: Second answer
+        ::
+        :flashcard:
+        Third question
+        A: Third answer
+        ::
+        """
+    )
+
+    marked = mark_flashcards_exported(text, {0, 1, 2})
+
+    assert marked == dedent(
+        """
+        :flashcard:
+        ✅First question
+        A: First answer
+        ::
+        :flashcard:
+        ✅Already exported
+        A: Second answer
+        ::
+        :flashcard:
+        ✅Third question
+        A: Third answer
+        ::
+        """
+    )
+
+
 def test_get_flashcard_fields():
     for answer, book, chapter, page in product(["A", "Answer"], ["Book", "R"], ["C", "Chapter"], ["P", "Page"]):
         # Swap in equivalent versions of the tags.
@@ -82,6 +122,20 @@ def test_get_flashcard_fields():
         assert fields["R"] == "Geography 101"
         assert fields["C"] == "2"
         assert fields["P"] == "15"
+
+
+def test_get_flashcard_fields_tags():
+    fields = get_flashcard_fields("Question\nT: proof, measure-theory")
+
+    assert fields["T"] == "proof, measure-theory"
+
+
+def test_parse_tags():
+    assert parse_tags("proof, measure-theory proof needs-review") == [
+        "proof",
+        "measure-theory",
+        "needs-review",
+    ]
 
 
 def test_get_flashcard_fields_default():
