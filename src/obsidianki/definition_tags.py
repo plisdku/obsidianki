@@ -62,15 +62,17 @@ def _classify(cards: list[dict[str, object]], model: str) -> set[int]:
 
 
 def _add_tag(block: str) -> str:
-    match = re.search(r"^T:\s*(.*)$", block, re.MULTILINE)
+    match = re.search(r"^T:[ \t]*(.*?)(?:\r?\n|$)", block, re.MULTILINE)
     if match:
         tags = parse_tags(match.group(1))
         if "definition" not in tags:
             tags.append("definition")
-        return block[: match.start(1)] + " ".join(tags) + block[match.end(1) :]
+        block = block[: match.start()] + block[match.end() :]
+        insertion = "T: " + " ".join(tags) + "\n"
+    else:
+        insertion = "T: definition\n"
 
-    field = re.search(r"^(A|Answer|X|Extra|R|Reference|Book|C|Chapter|P|Page):", block, re.MULTILINE)
-    insertion = "T: definition\n"
+    field = re.search(r"^(R|Reference|Book|C|Chapter|P|Page):", block, re.MULTILINE)
     return block[: field.start()] + insertion + block[field.start() :] if field else block + insertion
 
 

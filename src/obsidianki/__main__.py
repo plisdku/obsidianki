@@ -17,6 +17,7 @@ from obsidianki.convert import (
     parse_tags,
 )
 from obsidianki.definition_tags import tag_definitions
+from obsidianki.lint import lint_file
 from obsidianki.my_emoji import EMOJI
 
 
@@ -85,6 +86,9 @@ def main():
     # )
     parser.add_argument("--json", action="store_true", help="Output as JSON instead of json")
     parser.add_argument(
+        "--lint", action="store_true", help="Check flashcard syntax and vault conventions without exporting"
+    )
+    parser.add_argument(
         "--all",
         action="store_true",
         help="Output cards with a checkmark in the question (they will be omitted by default)",
@@ -130,6 +134,17 @@ def main():
 
     with open(args.input_file, "r", encoding="utf-8") as f:
         obsidian_text = f.read()
+
+    if args.lint:
+        issues = lint_file(args.input_file)
+        for issue in issues:
+            print(issue)
+        errors = sum(issue.level == "ERROR" for issue in issues)
+        warnings = sum(issue.level == "WARNING" for issue in issues)
+        print(f"Lint: {errors} error(s), {warnings} warning(s)")
+        if errors:
+            raise SystemExit(1)
+        return
 
     if args.tag_definitions:
         try:

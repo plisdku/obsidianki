@@ -12,6 +12,7 @@ from obsidianki.convert import (
     mark_flashcards_exported,
     parse_tags,
 )
+from obsidianki.lint import lint_text
 
 
 def test_extract_flashcard_blocks():
@@ -180,3 +181,16 @@ def test_convert_math():
     assert convert_math("$x < y$") == r"\(x &lt; y\)"
     assert convert_math("$x & y$") == r"\(x &amp; y\)"
     assert convert_math("$$x\n+\ny$$") == "\\[x<br>\n+<br>\ny\\]"
+
+
+def test_lint_reports_control_characters_and_missing_reference():
+    issues = lint_text(":flashcard:\nQuestion\nA: $x\x01$\n::\n", "My note.md")
+
+    assert any(issue.level == "ERROR" and "U+0001" in issue.message for issue in issues)
+    assert any(issue.level == "WARNING" and "My note" in issue.message for issue in issues)
+
+
+def test_lint_accepts_filename_stem_reference_and_valid_math():
+    issues = lint_text(":flashcard:\nQuestion\nA: $x$\nR: My note\n::\n", "My note.md")
+
+    assert issues == []
